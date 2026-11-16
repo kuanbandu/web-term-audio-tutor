@@ -1,0 +1,16 @@
+{
+  "name": "web-term-audio-tutor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "手机优先的网页专业术语提取 + TTS 朗读学习工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

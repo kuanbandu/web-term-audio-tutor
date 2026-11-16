@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ff5a1f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="术语朗读卡" />
+    <meta
+      name="description"
+      content="输入网页地址或粘贴正文，自动提取专业术语，用手机 TTS 朗读学习。适合 PortSwigger、渗透测试与英语技术阅读。"
+    />
+    <title>术语朗读卡 · Term Audio Tutor</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ff5a1f'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white' font-family='Arial'%3E%E2%97%89%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo" aria-hidden="true">◉</span>
+          <div class="brand-text">
+            <h1>术语朗读卡</h1>
+            <p id="sourceLine">输入网页，生成可听的术语卡</p>
+          </div>
+        </div>
+        <button id="btnSettings" class="icon-btn" type="button" title="设置" aria-label="打开设置">⚙️</button>
+      </header>
+
+      <main>
+        <!-- ============ 学习 ============ -->
+        <section id="view-learn" class="view">
+          <div class="card input-card">
+            <label class="label" for="urlInput">网页地址</label>
+            <div class="row">
+              <input
+                id="urlInput"
+                type="url"
+                inputmode="url"
+                placeholder="https://portswigger.net/web-security/..."
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+              <button id="btnFetch" class="btn primary" type="button">抓取</button>
+            </div>
+
+            <details id="pasteBox" class="paste-box">
+              <summary>抓取失败？直接粘贴正文</summary>
+              <textarea
+                id="textInput"
+                rows="7"
+                placeholder="把网页正文粘贴到这里。至少几十个英文单词效果更好…"
+              ></textarea>
+            </details>
+
+            <button id="btnExtract" class="btn primary wide" type="button">提取术语并生成卡片</button>
+            <p id="status" class="status" role="status"></p>
+            <p id="modeHint" class="hint"></p>
+          </div>
+
+          <div id="player" class="card player hidden">
+            <div class="player-top">
+              <div class="player-meta">
+                <span id="progress" class="progress">0 / 0</span>
+                <span id="playState" class="play-state"></span>
+              </div>
+              <div class="row tight">
+                <button id="btnPlay" class="btn primary" type="button">▶ 朗读</button>
+                <button id="btnStop" class="btn ghost" type="button" disabled>⏹ 停止</button>
+              </div>
+            </div>
+
+            <div class="seg" role="group" aria-label="朗读模式">
+              <button type="button" class="seg-btn active" data-mode="card">单词卡</button>
+              <button type="button" class="seg-btn" data-mode="quiz">问答</button>
+            </div>
+
+            <div class="row between player-options">
+              <label class="check"><input id="loopToggle" type="checkbox" /> 循环播放</label>
+              <label class="rate-inline">
+                语速
+                <input id="playRate" type="range" min="0.6" max="1.4" step="0.05" />
+                <span id="playRateValue">0.95×</span>
+              </label>
+            </div>
+          </div>
+
+          <div id="cardsWrap" class="cards"></div>
+          <p id="emptyHint" class="empty">还没有术语。抓取一个页面，或粘贴正文后点“提取术语”。</p>
+
+          <div id="resultActions" class="row tight export-row hidden">
+            <button id="btnExportJson" class="btn ghost small" type="button">导出 JSON</button>
+            <button id="btnExportCsv" class="btn ghost small" type="button">导出 Anki CSV</button>
+          </div>
+        </section>
+
+        <!-- ============ 生词本 ============ -->
+        <section id="view-notebook" class="view hidden">
+          <div class="card">
+            <div class="row between">
+              <h2>生词本 <span id="nbCount" class="chip">0</span></h2>
+              <div class="row tight">
+                <button id="btnNbPlay" class="btn primary small" type="button">▶ 朗读</button>
+                <button id="btnNbStop" class="btn ghost small" type="button" disabled>⏹</button>
+              </div>
+            </div>
+            <p class="hint">点卡片朗读；点 ★ 移出生词本。数据只保存在本机浏览器。</p>
+            <div id="nbList" class="cards"></div>
+            <p id="nbEmpty" class="empty">还没有收藏。在学习页点卡片右上角的 ☆ 加入。</p>
+            <div class="row tight export-row">
+              <button id="btnExportNbJson" class="btn ghost small" type="button">导出 JSON</button>
+              <button id="btnExportNbCsv" class="btn ghost small" type="button">导出 Anki CSV</button>
+              <button id="btnClearNb" class="btn danger ghost small" type="button">清空</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 设置 ============ -->
+        <section id="view-settings" class="view hidden">
+          <div class="card">
+            <h2>LLM 设置</h2>
+            <p class="hint">
+              兼容 OpenAI 格式，默认 DeepSeek。Key 只保存在本机浏览器 localStorage，只会发送到你填写的接口。
+            </p>
+
+            <label class="label" for="baseUrl">Base URL</label>
+            <input id="baseUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" />
+            <p class="hint">例如 https://api.deepseek.com（不要填 /chat/completions）。</p>
+
+            <label class="label" for="apiKey">API Key</label>
+            <div class="row">
+              <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-..." />
+              <button id="btnToggleKey" class="btn ghost small" type="button">显示</button>
+            </div>
+
+            <label class="label" for="model">模型</label>
+            <input id="model" type="text" autocomplete="off" spellcheck="false" />
+
+            <div class="row tight top-gap">
+              <button id="btnSaveSettings" class="btn primary" type="button">保存设置</button>
+              <button id="btnTest" class="btn ghost" type="button">测试连接</button>
+            </div>
+            <p id="settingsStatus" class="status" role="status"></p>
+            <p class="hint">
+              没有 Key 也能用：会用内置词表做粗略提取，能立刻出声，但释义和例句质量不如 LLM。
+            </p>
+          </div>
+
+          <div class="card">
+            <h2>朗读设置</h2>
+
+            <label class="label" for="voiceSelect">英文音色</label>
+            <select id="voiceSelect">
+              <option value="">自动（推荐）</option>
+            </select>
+            <p class="hint">列表来自手机系统。iOS 可在“设置 → 辅助功能 → 朗读内容”里下载更多音色。</p>
+
+            <label class="label" for="rateSetting">默认语速 <span id="rateValue" class="inline-value">0.95×</span></label>
+            <input id="rateSetting" type="range" min="0.6" max="1.4" step="0.05" />
+
+            <label class="label" for="quizDelay">问答模式停顿</label>
+            <select id="quizDelay">
+              <option value="1000">1 秒</option>
+              <option value="1500">1.5 秒</option>
+              <option value="2000">2 秒</option>
+              <option value="3000">3 秒</option>
+            </select>
+
+            <div class="row tight top-gap">
+              <button id="btnRefreshVoices" class="btn ghost small" type="button">刷新音色列表</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>数据与说明</h2>
+            <p class="hint">
+              抓取通过公共阅读代理 r.jina.ai 完成，可能受速率限制；需要登录的页面抓不到时，请复制正文粘贴。
+            </p>
+            <button id="btnClearData" class="btn danger ghost" type="button">清除本地数据</button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabbar" aria-label="主导航">
+        <button type="button" class="tab active" data-view="learn"><span aria-hidden="true">📚</span>学习</button>
+        <button type="button" class="tab" data-view="notebook"><span aria-hidden="true">🔖</span>生词本</button>
+        <button type="button" class="tab" data-view="settings"><span aria-hidden="true">⚙️</span>设置</button>
+      </nav>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
