@@ -1,5 +1,7 @@
 # 术语朗读卡 · web-term-audio-tutor
 
+**在线使用：<https://kuanbandu.github.io/web-term-audio-tutor/>**
+
 手机优先的「网页术语 → 学习卡 → TTS 朗读」小工具。输入一个网页地址（或直接粘贴正文），自动提取专业英文术语，生成带中文释义和例句的卡片，用手机自带语音朗读。
 
 适合 PortSwigger Web Security Academy、渗透测试文档、英文技术博客等场景。交互取向参考 Read Frog 的轻量阅读学习体验：打开即用，不装扩展、不依赖后端。
